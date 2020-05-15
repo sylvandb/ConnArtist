@@ -144,11 +144,12 @@ function drawGraph(userInit, view, variable, mode) {
                             .data(edges)
                             .enter().append("line")
                             .attr("class", function(d,i) {
+                                var w = " weight_" + Math.max(1, Math.min(5, d.weight));
                                 if(d.value == 2)
-                                    return "tcp" + " weight_" + Math.min(5, d.weight);
+                                    return "tcp" + w;
                                 else if(d.value == 1)
-                                    return "udp" + " weight_" + Math.min(5, d.weight);
-                                return "therest" + " weight_" + Math.min(5, d.weight);
+                                    return "udp" + w;
+                                return "therest" + w;
                             });
 
                 var drag = force.drag()
@@ -164,7 +165,7 @@ function drawGraph(userInit, view, variable, mode) {
                             .data(graph.nodes)
                             .enter().append("circle")
                             .attr("class", function(d,i) { 
-                                if(d.group == 1)
+                                if(d.group == 0)
                                     return "node source";
                                 return "node dest";
                             })
