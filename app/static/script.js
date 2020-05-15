@@ -6,7 +6,7 @@ function toggleRefresh() {
     } else {
         refresh = true;
         $("#toggle").text("Pause");
-        toast("Updates Resumed", "Every 8 seconds we will check to see if the previous graph has finished drawing. If so, we will pull a new one for you automatically.");
+        toast("Updates Resumed", "Periodically if the previous graph has finished drawing, it will automatically update.");
     }
     $("#refresh").toggle();
     $("#saveMe").toggle();
@@ -106,8 +106,9 @@ function drawGraph(userInit, view, variable, mode) {
 
                 var elementSelector = '.graph',
                         svgSelector = '#svg-graph',
-                        width = 960,
-                        height = 600, isDragging;
+                        isDragging,
+                        width = 1800, height = 800;
+                        // also index.html, main.css (#graph, #list)
 
                 var lScale = d3.scale.pow().exponent(5)
                             .range([3, 15])

@@ -45,13 +45,13 @@ text {
 }
 
 #graph {
-    width: 960px;
-    height: 600px;
+    width: 1800px;
+    height: 800px;
     float: left;
 }
 
 #list {
-    margin-left: 960px;
+    margin-left: 1800px;
 }
 
 #refresh, #saveMe {

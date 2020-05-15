@@ -46,7 +46,7 @@
             if(refresh)
                 if(!pendingDraw)
                     drawGraph(false, '{{ view }}', '{{ variable }}', '{{ mode }}');
-        }, 8000);
+        }, 30000);
     </script>
 </head>
 
@@ -82,7 +82,7 @@
     </nav>
 
     <div class="graph" id="graph">
-        <svg id="svg-graph" width="960" height="600"></svg>
+        <svg id="svg-graph" width="1800" height="800"></svg>
         <!-- <script src="https://d3js.org/d3.v4.min.js"></script> -->
     </div>
 
