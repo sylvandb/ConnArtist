@@ -195,11 +195,11 @@ function drawGraph(userInit, view, variable, mode) {
                                     data += d.srcIPs[i] + ":" + d.srcPORT[i] + " --> " + d.dstIPs[i] + ":" + d.dstPORT[i] + "\\n";
                                 }
                                 var output = "Details for <b>";
-                                if(mode == "IP" && d.URL != "Unknown")
-                                    output += "<a class='url_lookup' href='javascript:hideTooltips();' rel='tooltip' title='" + d.URL + "'>";
+                                //if(mode == "IP" && d.URL != "Unknown")
+                                //    output += "<a class='url_lookup' href='javascript:hideTooltips();' rel='tooltip' title='" + d.URL + "'>";
                                 output += d.id;
-                                if(mode == "IP" && d.URL != "Unknown")
-                                    output += "</a>";
+                                //if(mode == "IP" && d.URL != "Unknown")
+                                //    output += "</a>";
                                 output += "</b> &nbsp;&nbsp;&nbsp;<a class='export' href='#' onmousedown='javascript:exportData(\"" + data + "\", \"" + d.id + "\", \"" + mode + "\")'>Export</a>";
 
                                 return output;
@@ -223,9 +223,9 @@ function drawGraph(userInit, view, variable, mode) {
                                     output += " → ";
 
                                     if(d.dstIPs[i] != d.id) {
-                                        if(d.URLs[i] != "Unknown")
-                                            output += "<a href='javascript:hideTooltips();' rel='tooltip' title='" + d.URLs[i] + "'>" + d.dstIPs[i] + "</a>";
-                                        else
+                                        //if(d.URLs[i] != "Unknown")
+                                        //    output += "<a href='javascript:hideTooltips();' rel='tooltip' title='" + d.URLs[i] + "'>" + d.dstIPs[i] + "</a>";
+                                        //else
                                             output += d.dstIPs[i];
                                         dst_match = false;
                                     }
