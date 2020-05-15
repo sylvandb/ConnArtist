@@ -28,11 +28,15 @@ line.weight_5 {
 }
 
 line.tcp {
-    stroke: red;
+    stroke: green;
 }
 
 line.udp {
-    stroke: green;
+    stroke: red;
+}
+
+line.therest {
+    stroke: gray;
 }
 
 text {

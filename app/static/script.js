@@ -144,9 +144,11 @@ function drawGraph(userInit, view, variable, mode) {
                             .data(edges)
                             .enter().append("line")
                             .attr("class", function(d,i) {
-                                if(d.value == 1)
+                                if(d.value == 2)
                                     return "tcp" + " weight_" + Math.min(5, d.weight);
-                                return "udp" + " weight_" + Math.min(5, d.weight);
+                                else if(d.value == 1)
+                                    return "udp" + " weight_" + Math.min(5, d.weight);
+                                return "therest" + " weight_" + Math.min(5, d.weight);
                             });
 
                 var drag = force.drag()
