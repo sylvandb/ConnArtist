@@ -193,10 +193,12 @@ function drawGraph(userInit, view, variable, mode) {
                                 return "true";
                             })
                             .attr("title", function(d) {
-                                var data = d.id + "," + d.group + "," + d.weight + "\\n";
+                                var data = d.id + "," + d.group + "\\n";
                                 for(var i = 0; i < d.srcIPs.length; i++) {
                                     data += d.srcIPs[i] + ":" + d.srcPORT[i] + " --> " + d.dstIPs[i] + ":" + d.dstPORT[i] + "\\n";
                                 }
+                                data += "out: " + d.reqbytes + "\\n";
+                                data += "in: " + d.rspbytes + "\\n";
                                 var output = "Details for <b>";
                                 //if(mode == "IP" && d.URL != "Unknown")
                                 //    output += "<a class='url_lookup' href='javascript:hideTooltips();' rel='tooltip' title='" + d.URL + "'>";
@@ -209,6 +211,8 @@ function drawGraph(userInit, view, variable, mode) {
                             })
                             .attr("data-content", function(d) {
                                 var output = "";
+                                output += "out: " + d.reqbytes + "<br>";
+                                output += "in: " + d.rspbytes + "<br>";
                                 for(var i = 0; i < d.srcIPs.length; i++) {
                                     var src_match = true, dst_match = true;
 
@@ -341,3 +345,5 @@ function getExport(file) {
         }
     });
 }
+
+// vi: sw=4 sts=4 ts=4 si ci et
