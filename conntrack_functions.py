@@ -16,46 +16,39 @@ def _get_conntrack():
 def _parse_conntrack(mode, conntrack):
     #print("MODE: " + mode)
 
-    json_output = {
-        "nodes": [],
-        "links": []
-    }
-
-    IP_seen = []
+    nodes = {}
     def _add_node(node_id, IPPs, my_grp, oth_grp):
-        if node_id not in IP_seen:
-            json_output["nodes"].append(
-            {"id":node_id,
-            "group":my_grp,
-            "srcIPs":[IPPs[0]],
-            "dstIPs":[IPPs[1]],
-            "srcPORT":[IPPs[2]],
-            "dstPORT":[IPPs[3]],
-            })
-            IP_seen.append(node_id)
+        try:
+            node = nodes[node_id]
+        except KeyError:
+            nodes[node_id] = {
+                "id": node_id,
+                "group": my_grp,
+                "srcIPs": [IPPs[0]],
+                "dstIPs": [IPPs[1]],
+                "srcPORT": [IPPs[2]],
+                "dstPORT": [IPPs[3]],
+            }
         else:
-            for node in json_output["nodes"]:
-                if node["id"] == node_id:
-                    if node["group"] == oth_grp:
-                        node["group"] = 2
-                    node["srcIPs"].append(IPPs[0])
-                    node["dstIPs"].append(IPPs[1])
-                    node["srcPORT"].append(IPPs[2])
-                    node["dstPORT"].append(IPPs[3])
+            if node["group"] == oth_grp:
+                node["group"] = 2
+            node["srcIPs"].append(IPPs[0])
+            node["dstIPs"].append(IPPs[1])
+            node["srcPORT"].append(IPPs[2])
+            node["dstPORT"].append(IPPs[3])
 
+    links = {}
     def _add_link(src_id, tgt_id, value):
-        linkExists = False
-        for link in json_output["links"]:
-            if link["source"] == src_id and link["target"] == tgt_id:
-                link["weight"] = link["weight"] + 1
-                linkExists = True
-
-        if not linkExists:
-            json_output["links"].append(
-            {"source": src_id,
-            "target": tgt_id,
-            "value": value,
-            "weight":1})
+        key = src_id + '-' + tgt_id
+        try:
+            links[key]['weight'] += 1
+        except KeyError:
+            links[key] = {
+                "source": cli_id,
+                "target": srv_id,
+                "value": value,
+                "weight": 1
+            }
 
     html_output = []
 
@@ -136,6 +129,10 @@ def _parse_conntrack(mode, conntrack):
         #   "target":"REPLACE",
         #   "value":"REPLACE"})
 
+    json_output = {
+        "nodes": list(nodes.values()),
+        "links": list(links.values()),
+    }
     return json_output, html_output
 
 
