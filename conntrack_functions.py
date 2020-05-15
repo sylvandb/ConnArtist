@@ -16,48 +16,61 @@ def _get_conntrack():
 def _parse_conntrack(mode, conntrack):
     #print("MODE: " + mode)
 
-    string_return = []
     json_output = {
         "nodes": [],
         "links": []
     }
     IP_seen = []
+    html_output = []
 
     for split_line in (l.split() for l in conntrack if l):
         if not split_line:
             break
 
         # protocol differences
-        # protoname, (ip/ports), magic value???
-        # where ip/ports is indices: client srcip, dstip, srcprt, dstprt; server srcip, dstip, srcprt, dstprt
+        # protoname, magic value???, (ip/ports/data), (ip/ports/data)
+        # where ip/ports is indices for:
+        #   client srcip, dstip, srcprt, dstprt
+        #   server srcip, dstip, srcprt, dstprt
         if split_line[0] == "tcp":
-            Magic = ('TCP', 2, (4, 5, 6, 7, 10, 11, 12, 13))
+            Magic = ('TCP', 2, (4, 5, 6, 7), (10, 11, 12, 13))
         elif split_line[0] == "udp":
-            Magic = ('UDP', 1, (3, 4, 5, 6, 9, 10, 11, 12))
+            Magic = ('UDP', 1, (3, 4, 5, 6), (9, 10, 11, 12))
+        elif split_line[0] == "icmp":
+            Magic = ('ICMP', 1, (3, 4, 5, 6, 7), (10, 11, 12, 13, 14))
         else:
-            # TODO: unrecognized protocol
+            # TODO: unrecognized protocols
             # if using netlink the IPs would probably be readable
             print('Unrecognized:', split_line)
             continue
-        if not split_line[Magic[2][4]][:4] == 'src=': # catch [UNREPLIED]
-            mt = Magic[2][:4] + tuple(m + 1 for m in Magic[2][4:])
-            Magic = Magic[:2] + (mt,)
+
+        # skip [UNREPLIED] etc. states inserted before server entries
+        if split_line[Magic[3][0]][:4] != 'src=':
+            mt = tuple(m + 1 for m in Magic[3])
+            Magic = Magic[:3] + (mt,)
 
         try:
             IPPs = [split_line[n].split('=')[1] for n in Magic[2]]
+            IPPs.extend(split_line[n].split('=')[1] for n in Magic[3])
         except:
             print('IP fail:', split_line)
             continue
 
-        string_return.extend([Magic[0], " client src: ", IPPs[0], "<br/>\n"])
-        string_return.extend([Magic[0], " client dst: ", IPPs[1], "<br/>\n"])
-        string_return.extend([Magic[0], " client src: ", IPPs[2], "<br/>\n"])
-        string_return.extend([Magic[0], " client dst: ", IPPs[3], "<br/>\n"])
-
-        string_return.extend([Magic[0], " server src: ", IPPs[4], "<br/>\n"])
-        string_return.extend([Magic[0], " server dst: ", IPPs[5], "<br/>\n"])
-        string_return.extend([Magic[0], " server src: ", IPPs[6], "<br/>\n"])
-        string_return.extend([Magic[0], " server dst: ", IPPs[7], "<br/>\n"])
+        if len(IPPs) == 8:
+            html_output.extend([Magic[0], " client src: ", IPPs[0], ':', IPPs[2], "<br/>\n"])
+            html_output.extend([Magic[0], " client dst: ", IPPs[1], ':', IPPs[3], "<br/>\n"])
+            html_output.extend([Magic[0], " server src: ", IPPs[4], ':', IPPs[6], "<br/>\n"])
+            html_output.extend([Magic[0], " server dst: ", IPPs[5], ':', IPPs[7], "<br/>\n"])
+        else:
+            n = int(len(IPPs) / 2)
+            html_output.extend([Magic[0], " client src: ", IPPs[0], "<br/>\n"])
+            html_output.extend([Magic[0], " client dst: ", IPPs[1], "<br/>\n"])
+            html_output.extend([Magic[0], " client other: ", str(IPPs[2:n]), "<br/>\n"])
+            html_output.extend([Magic[0], " server src: ", IPPs[0+n], "<br/>\n"])
+            html_output.extend([Magic[0], " server dst: ", IPPs[1+n], "<br/>\n"])
+            html_output.extend([Magic[0], " server other: ", str(IPPs[2+n:]), "<br/>\n"])
+            IPPs = [IPPs[0], IPPs[1], 'NA', 'NA']
+        html_output.append("<br/>\n")
 
         if "IP" in mode:
             destinationURL = ""
@@ -199,8 +212,6 @@ def _parse_conntrack(mode, conntrack):
                 "value":Magic[1],
                 "weight":1})
 
-        string_return.append("<br/>\n")
-
         # Generate json that D3 likes
         # json_output = {}
         # json_output["nodes"] = []
@@ -216,7 +227,7 @@ def _parse_conntrack(mode, conntrack):
         #   "target":"REPLACE",
         #   "value":"REPLACE"})
 
-    return json_output, string_return
+    return json_output, html_output
 
 
 def conntrack_parse(mode):
@@ -276,12 +287,13 @@ if __name__ == "__main__":
 
     if 'parse' in sys.argv:
         mode = sys.argv[2]
+        print('--- ERR ---')
         json_out, str_out = _parse_conntrack(mode, ctd or _get_conntrack())
-        print('---')
-        print(json_out)
-        print('---')
+        print('--- JSON ---')
+        print(json.dumps(json_out, indent=2))
+        print('--- HTML ---')
         print(''.join(str_out))
-        print('---')
+        print('--- EOF ---')
     else:
         l = ctd or _get_conntrack()
         print(l)
