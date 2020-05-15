@@ -276,9 +276,12 @@ function drawGraph(userInit, view, variable, mode) {
                 function zoomEvent() {
                     hidePopover();
                     node
-                    .attr("r", function(d) { return 5 / d3.event.scale; })
+                    .attr("r", function(d) {
+                        return Math.max(2, Math.min(11, Math.sqrt(d.reqbytes + d.rspbytes) / 100)) / d3.event.scale;
+                    })
                     .style("stroke-width", function(d) {
-                        return 2 / d3.event.scale;});
+                        return 2 / d3.event.scale;
+                    });
                   link.style('stroke-width', 1 / d3.event.scale);
                   svg.attr("transform",
                             "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
