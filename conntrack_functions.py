@@ -20,7 +20,43 @@ def _parse_conntrack(mode, conntrack):
         "nodes": [],
         "links": []
     }
+
     IP_seen = []
+    def _add_node(node_id, IPPs, my_grp, oth_grp):
+        if node_id not in IP_seen:
+            json_output["nodes"].append(
+            {"id":node_id,
+            "group":my_grp,
+            "srcIPs":[IPPs[0]],
+            "dstIPs":[IPPs[1]],
+            "srcPORT":[IPPs[2]],
+            "dstPORT":[IPPs[3]],
+            })
+            IP_seen.append(node_id)
+        else:
+            for node in json_output["nodes"]:
+                if node["id"] == node_id:
+                    if node["group"] == oth_grp:
+                        node["group"] = 2
+                    node["srcIPs"].append(IPPs[0])
+                    node["dstIPs"].append(IPPs[1])
+                    node["srcPORT"].append(IPPs[2])
+                    node["dstPORT"].append(IPPs[3])
+
+    def _add_link(src_id, tgt_id, value):
+        linkExists = False
+        for link in json_output["links"]:
+            if link["source"] == src_id and link["target"] == tgt_id:
+                link["weight"] = link["weight"] + 1
+                linkExists = True
+
+        if not linkExists:
+            json_output["links"].append(
+            {"source": src_id,
+            "target": tgt_id,
+            "value": value,
+            "weight":1})
+
     html_output = []
 
     for split_line in (l.split() for l in conntrack if l):
@@ -73,112 +109,17 @@ def _parse_conntrack(mode, conntrack):
         html_output.append("<br/>\n")
 
         if "IP" in mode:
-            if IPPs[0] not in IP_seen:
-                json_output["nodes"].append(
-                {"id":IPPs[0],
-                "group":0,
-                "srcIPs":[IPPs[0]],
-                "dstIPs":[IPPs[1]],
-                "srcPORT":[IPPs[2]],
-                "dstPORT":[IPPs[3]],
-                })
-                IP_seen.append(IPPs[0])
-            else:
-                for node in json_output["nodes"]:
-                    if node["id"] == IPPs[0]:
-                        if node["group"] == 1:
-                            node["group"] = 2
-                        node["srcIPs"].append(IPPs[0])
-                        node["dstIPs"].append(IPPs[1])
-                        node["srcPORT"].append(IPPs[2])
-                        node["dstPORT"].append(IPPs[3])
+            cli_id = IPPs[0]
+            srv_id = IPPs[1]
+        elif "PORT" in mode and IPPs[2] != 'NA':
+            cli_id = IPPs[2]
+            srv_id = IPPs[3]
+        else:
+            print("bad mode: %s w/%s, %s" % (mode, Magic, IPPs))
 
-            if IPPs[1] not in IP_seen:
-                json_output["nodes"].append(
-                {"id":IPPs[1],
-                "group":1,
-                "srcIPs":[IPPs[0]],
-                "dstIPs":[IPPs[1]],
-                "srcPORT":[IPPs[2]],
-                "dstPORT":[IPPs[3]],
-                })
-                IP_seen.append(IPPs[1])
-            else:
-                for node in json_output["nodes"]:
-                    if node["id"] == IPPs[1]:
-                        if node["group"] == 0:
-                            node["group"] = 2
-                        node["srcIPs"].append(IPPs[0])
-                        node["dstIPs"].append(IPPs[1])
-                        node["srcPORT"].append(IPPs[2])
-                        node["dstPORT"].append(IPPs[3])
-
-            linkExists = False
-            for link in json_output["links"]:
-                if link["source"] == IPPs[0] and link["target"] == IPPs[1]:
-                    link["weight"] = link["weight"] + 1
-                    linkExists = True
-
-            if not linkExists:
-                json_output["links"].append(
-                {"source":IPPs[0],
-                "target":IPPs[1],
-                "value":Magic[1],
-                "weight":1})
-
-        elif "PORT" in mode:
-            if IPPs[2] not in IP_seen:
-                json_output["nodes"].append(
-                {"id":IPPs[2],
-                "group":0,
-                "srcIPs":[IPPs[0]],
-                "dstIPs":[IPPs[1]],
-                "srcPORT":[IPPs[2]],
-                "dstPORT":[IPPs[3]],
-                })
-                IP_seen.append(IPPs[2])
-            else:
-                for node in json_output["nodes"]:
-                    if node["id"] == IPPs[2]:
-                        if node["group"] == 1:
-                            node["group"] = 2
-                        node["srcIPs"].append(IPPs[0])
-                        node["dstIPs"].append(IPPs[1])
-                        node["srcPORT"].append(IPPs[2])
-                        node["dstPORT"].append(IPPs[3])
-
-            if IPPs[3] not in IP_seen:
-                json_output["nodes"].append(
-                {"id":IPPs[3],
-                "group":1,
-                "srcIPs":[IPPs[0]],
-                "dstIPs":[IPPs[1]],
-                "srcPORT":[IPPs[2]],
-                "dstPORT":[IPPs[3]],
-                })
-                IP_seen.append(IPPs[3])
-            else:
-                for node in json_output["nodes"]:
-                    if node["id"] == IPPs[3]:
-                        if node["group"] == 0:
-                            node["group"] = 2
-                        node["srcIPs"].append(IPPs[0])
-                        node["dstIPs"].append(IPPs[1])
-                        node["srcPORT"].append(IPPs[2])
-                        node["dstPORT"].append(IPPs[3])
-
-            linkExists = False
-            for link in json_output["links"]:
-                if link["source"] == IPPs[2] and link["target"] == IPPs[3]:
-                    link["weight"] = link["weight"] + 1
-                    linkExists = True
-
-            if not linkExists:
-                json_output["links"].append(
-                {"source":IPPs[2],
-                "target":IPPs[3],
-                "value":Magic[1],
-                "weight":1})
+        _add_node(cli_id, IPPs, 0, 1)
+        _add_node(srv_id, IPPs, 1, 0)
+        _add_link(cli_id, srv_id, Magic[1])
 
         # Generate json that D3 likes
         # json_output = {}
