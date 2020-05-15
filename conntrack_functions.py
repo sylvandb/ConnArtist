@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 # vi: sw=4 sts=4 ts=4 si ci et
-import subprocess
-import json
 import datetime
+import json
 import os
+import subprocess
 
 # TODO:
-#  node weight as bytes???
+#  node weight as bytes
 #  link weight???
 #  save conntrack unparsed???
 #  more protocols - which???
-#  weights in general: probably 5 is too many, 3? big, significant, exists
+#  weights in general: probably 5 is too many, 3? big, significant, exists; scale in JS so it can tooltip actual
+#  any way to de-dupe node info and JS multiply it (cli nearly a dupe of server with some fields reversed)
+#  move data from app/static into app/data (or something like that)
+
+
 
 def _get_conntrack():
     # in /etc/sudoers add: ALL ALL= (root) NOPASSWD: /usr/sbin/conntrack -L
@@ -45,17 +49,19 @@ def _parse_conntrack(conntrack, mode='IP'):
     # }
 
     nodes = {}
-    def _add_node(node_id, IPPs, direction):
+    def _add_node(node_id, IPPs, direction, reqbytes, rspbytes):
         try:
             node = nodes[node_id]
         except KeyError:
             nodes[node_id] = {
-                'id'     : node_id,
-                'group'  : direction,
-                'srcIPs' : [IPPs[0]],
-                'dstIPs' : [IPPs[1]],
-                'srcPORT': [IPPs[2]],
-                'dstPORT': [IPPs[3]],
+                'id'      : node_id,
+                'group'   : direction,
+                'srcIPs'  : [IPPs[0]],
+                'dstIPs'  : [IPPs[1]],
+                'srcPORT' : [IPPs[2]],
+                'dstPORT' : [IPPs[3]],
+                'reqbytes': reqbytes,
+                'rspbytes': rspbytes,
             }
         else:
             if node['group'] != direction:
@@ -64,6 +70,8 @@ def _parse_conntrack(conntrack, mode='IP'):
             node['dstIPs' ].append(IPPs[1])
             node['srcPORT'].append(IPPs[2])
             node['dstPORT'].append(IPPs[3])
+            node['reqbytes'] += reqbytes
+            node['rspbytes'] += rspbytes
 
     links = {}
     def _add_link(src_id, tgt_id, protocol):
@@ -80,6 +88,10 @@ def _parse_conntrack(conntrack, mode='IP'):
 
     html_frags = []
 
+    # "tcp      6 431867 ESTABLISHED src=192.168.11.171 dst=1.2.4.8 sport=62162 dport=443 packets=15 bytes=2519 src=1.2.4.8 dst=192.168.11.171 sport=443 dport=62162 packets=12 bytes=4529 [ASSURED] mark=0 use=1",
+    # "udp      17 31 src=192.168.10.171 dst=8.4.2.1 sport=5123 dport=2524 packets=1 bytes=125 src=8.4.2.1 dst=192.168.10.171 sport=2524 dport=5123 packets=1 bytes=347 mark=0 use=1",
+    # "udp      17 43 src=192.168.10.171 dst=1.2.8.1 sport=5123 dport=6969 packets=2 bytes=170 [UNREPLIED] src=1.2.8.1 dst=192.168.10.171 sport=6969 dport=5123 packets=0 bytes=0 mark=0 use=1",
+    # "icmp     1 13 src=192.168.10.171 dst=192.168.10.1 type=8 code=0 id=567 packets=10 bytes=840 src=192.168.10.1 dst=192.168.10.171 type=0 code=0 id=567 packets=10 bytes=840 mark=0 use=1",
     for split_line in (l.split() for l in conntrack if l):
         if not split_line:
             break
@@ -107,13 +119,12 @@ def _parse_conntrack(conntrack, mode='IP'):
         try:
             while split_line[Magic[3][rspsrc]][:4] != 'src=':
                 rspsrc += 1
-        except IndexError:
-            print('Rsp IP fail:', split_line)
+        except Exception as e:
+            print('Rsp IP fail:', split_line, rspsrc, Magic, e)
             continue
         else:
             if rspsrc:
-                mt = tuple(m + rspsrc for m in Magic[3])
-                Magic = Magic[:3] + (mt,)
+                Magic = Magic[:3] + (tuple(m + rspsrc for m in Magic[3]),)
 
         IPPs = []
         try:
@@ -121,9 +132,19 @@ def _parse_conntrack(conntrack, mode='IP'):
             IPPs.extend(split_line[n].split('=')[1] for n in Magic[2])
             # response
             IPPs.extend(split_line[n].split('=')[1] for n in Magic[3])
-        except:
-            print('IP fail:', split_line)
+        except Exception as e:
+            print('IP fail:', split_line, IPPs, Magic, e)
             continue
+
+        ACCTing = []
+        try:
+            # assumes packets, bytes follow request, response IPPort info
+            for reqrsp in (2, 3):
+                for field in (1, 2):
+                    ACCTing.append(int(split_line[field + Magic[reqrsp][-1]].split('=')[1]))
+        except Exception as e:
+            print('ACCT fail:', split_line, ACCTing, Magic, e)
+            ACCTing = (ACCTing + [0, 0, 0, 0])[:4]
 
         if len(IPPs) == 8:
             # host:port
@@ -155,8 +176,8 @@ def _parse_conntrack(conntrack, mode='IP'):
             print("bad mode: %s w/%s, %s" % (mode, Magic, IPPs))
             continue
 
-        _add_node(cli_id, IPPs, DIRORIG)
-        _add_node(srv_id, IPPs, DIRRESP)
+        _add_node(cli_id, IPPs, DIRORIG, ACCTing[1], ACCTing[3])
+        _add_node(srv_id, IPPs, DIRRESP, ACCTing[3], ACCTing[1])
         _add_link(cli_id, srv_id, Magic[1])
 
     return {'nodes': list(nodes.values()), 'links': list(links.values())}, html_frags
